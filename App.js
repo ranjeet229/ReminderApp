@@ -66,7 +66,6 @@ const ReminderApp = () => {
     { id: 'work', name: 'Work', color: '#FF9500' },
     { id: 'health', name: 'Health', color: '#34C759' },
     { id: 'shopping', name: 'Shopping', color: '#AF52DE' },
-    { id: 'family', name: 'Family', color: '#FF2D92' }
   ];
 
   const priorities = [
@@ -516,7 +515,7 @@ const ReminderApp = () => {
         <View style={styles.headerContent}>
           <View style={styles.headerLeft}>
             <Icon name="bell" size={24} color="#fff" />
-            <Text style={styles.headerTitle}>Smart Reminders</Text>
+            <Text style={styles.headerTitle}>Remind Me</Text>
           </View>
           <TouchableOpacity 
             style={styles.addButton}
@@ -553,7 +552,7 @@ const ReminderApp = () => {
               onPress={() => setShowCategoryPicker(true)}
             >
               <Text style={styles.filterText}>
-                {filterCategory === 'all' ? 'All Categories' : 
+                {filterCategory === 'all' ? 'Categories' :
                  categories.find(c => c.id === filterCategory)?.name}
               </Text>
               <Icon name="chevron-down" size={16} color="#666" />
@@ -563,7 +562,7 @@ const ReminderApp = () => {
               onPress={() => setShowPriorityPicker(true)}
             >
               <Text style={styles.filterText}>
-                {filterPriority === 'all' ? 'All Priorities' : 
+                {filterPriority === 'all' ? 'Priorities' :
                  priorities.find(p => p.id === filterPriority)?.name}
               </Text>
               <Icon name="chevron-down" size={16} color="#666" />
