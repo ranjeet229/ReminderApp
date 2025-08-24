@@ -58,6 +58,8 @@ const ReminderApp = () => {
   const [filterPriority, setFilterPriority] = useState('all');
   const [showCategoryPicker, setShowCategoryPicker] = useState(false);
   const [showPriorityPicker, setShowPriorityPicker] = useState(false);
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [selectedDate, setSelectedDate] = useState(new Date());
 
   const categories = [
     { id: 'personal', name: 'Personal', color: '#007AFF' },
@@ -289,6 +291,165 @@ const ReminderApp = () => {
       </View>
     </Modal>
   );
+
+  const DatePicker = ({ visible, onClose, selectedDate, onDateSelect }) => {
+    const [tempDate, setTempDate] = useState(selectedDate);
+    const [currentMonth, setCurrentMonth] = useState(selectedDate.getMonth());
+    const [currentYear, setCurrentYear] = useState(selectedDate.getFullYear());
+
+    useEffect(() => {
+      if (visible) {
+        const date = selectedDate || new Date();
+        setTempDate(date);
+        setCurrentMonth(date.getMonth());
+        setCurrentYear(date.getFullYear());
+      }
+    }, [visible, selectedDate]);
+
+    const months = [
+      'January', 'February', 'March', 'April', 'May', 'June',
+      'July', 'August', 'September', 'October', 'November', 'December'
+    ];
+
+    const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
+    const firstDayOfMonth = new Date(currentYear, currentMonth, 1).getDay();
+    const today = new Date();
+    
+    const handleDateSelect = (day) => {
+      const newDate = new Date(currentYear, currentMonth, day);
+      setTempDate(newDate);
+    };
+
+    const handleSave = () => {
+      onDateSelect(tempDate);
+      onClose();
+    };
+
+    const nextMonth = () => {
+      if (currentMonth === 11) {
+        setCurrentMonth(0);
+        setCurrentYear(currentYear + 1);
+      } else {
+        setCurrentMonth(currentMonth + 1);
+      }
+    };
+
+    const prevMonth = () => {
+      if (currentMonth === 0) {
+        setCurrentMonth(11);
+        setCurrentYear(currentYear - 1);
+      } else {
+        setCurrentMonth(currentMonth - 1);
+      }
+    };
+
+    const renderCalendarDays = () => {
+      const days = [];
+      const totalCells = Math.ceil((daysInMonth + firstDayOfMonth) / 7) * 7;
+
+      // Add empty cells for days before the first day of the month
+      for (let i = 0; i < firstDayOfMonth; i++) {
+        days.push(<View key={`empty-${i}`} style={styles.calendarDay} />);
+      }
+
+      // Add days of the month
+      for (let day = 1; day <= daysInMonth; day++) {
+        const isSelected = tempDate && 
+          tempDate.getDate() === day && 
+          tempDate.getMonth() === currentMonth && 
+          tempDate.getFullYear() === currentYear;
+        
+        const isToday = today.getDate() === day && 
+          today.getMonth() === currentMonth && 
+          today.getFullYear() === currentYear;
+
+        days.push(
+          <TouchableOpacity
+            key={day}
+            style={[
+              styles.calendarDay,
+              isSelected && styles.selectedDay,
+              isToday && !isSelected && styles.todayDay
+            ]}
+            onPress={() => handleDateSelect(day)}
+          >
+            <Text style={[
+              styles.calendarDayText,
+              isSelected && styles.selectedDayText,
+              isToday && !isSelected && styles.todayDayText
+            ]}>
+              {day}
+            </Text>
+          </TouchableOpacity>
+        );
+      }
+
+      return days;
+    };
+
+    return (
+      <Modal visible={visible} transparent animationType="fade">
+        <View style={styles.pickerOverlay}>
+          <View style={styles.datePickerModal}>
+            <View style={styles.pickerHeader}>
+              <TouchableOpacity onPress={onClose}>
+                <Text style={styles.pickerCancel}>Cancel</Text>
+              </TouchableOpacity>
+              <Text style={styles.pickerTitle}>Select Date</Text>
+              <TouchableOpacity onPress={handleSave}>
+                <Text style={styles.pickerSave}>Save</Text>
+              </TouchableOpacity>
+            </View>
+            
+            <View style={styles.calendarHeader}>
+              <TouchableOpacity style={styles.monthNavButton} onPress={prevMonth}>
+                <Icon name="chevron-up" size={20} color="#007AFF" />
+              </TouchableOpacity>
+              <Text style={styles.monthYearText}>
+                {months[currentMonth]} {currentYear}
+              </Text>
+              <TouchableOpacity style={styles.monthNavButton} onPress={nextMonth}>
+                <Icon name="chevron-down" size={20} color="#007AFF" />
+              </TouchableOpacity>
+            </View>
+
+            <View style={styles.weekDaysHeader}>
+              {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => (
+                <Text key={day} style={styles.weekDayText}>{day}</Text>
+              ))}
+            </View>
+
+            <View style={styles.calendarGrid}>
+              {renderCalendarDays()}
+            </View>
+
+            <View style={styles.datePickerActions}>
+              <TouchableOpacity
+                style={styles.clearDateButton}
+                onPress={() => {
+                  onDateSelect(null);
+                  onClose();
+                }}
+              >
+                <Text style={styles.clearDateText}>Clear Date</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.todayButton}
+                onPress={() => {
+                  const today = new Date();
+                  setTempDate(today);
+                  setCurrentMonth(today.getMonth());
+                  setCurrentYear(today.getFullYear());
+                }}
+              >
+                <Text style={styles.todayButtonText}>Today</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+    );
+  };
 
   return (
     <SafeAreaView style={styles.container}>
@@ -629,16 +790,54 @@ const ReminderApp = () => {
             
             <View style={styles.formGroup}>
               <Text style={styles.label}>Due Date (optional)</Text>
-              <TextInput
-                style={styles.dateInput}
-                value={newReminder.dueDate}
-                onChangeText={(date) => setNewReminder({...newReminder, dueDate: date})}
-                placeholder="YYYY-MM-DD"
-              />
+              <TouchableOpacity
+                style={styles.dateButton}
+                onPress={() => {
+                  // Parse the existing date string properly
+                  let initialDate = new Date();
+                  if (newReminder.dueDate) {
+                    // Create date from YYYY-MM-DD format at noon to avoid timezone issues
+                    const [year, month, day] = newReminder.dueDate.split('-').map(Number);
+                    initialDate = new Date(year, month - 1, day, 12, 0, 0, 0);
+                  }
+                  setSelectedDate(initialDate);
+                  setShowDatePicker(true);
+                }}
+              >
+                <Text style={[
+                  styles.dateButtonText,
+                  !newReminder.dueDate && styles.placeholderText
+                ]}>
+                  {newReminder.dueDate 
+                    ? new Date(newReminder.dueDate).toLocaleDateString()
+                    : 'Select date'
+                  }
+                </Text>
+                <Icon name="calendar" size={16} color="#666" />
+              </TouchableOpacity>
             </View>
           </ScrollView>
         </SafeAreaView>
       </Modal>
+
+      {/* Date Picker */}
+      <DatePicker
+        visible={showDatePicker}
+        onClose={() => setShowDatePicker(false)}
+        selectedDate={selectedDate}
+        onDateSelect={(date) => {
+          if (date) {
+            // Format date as YYYY-MM-DD to avoid timezone issues
+            const year = date.getFullYear();
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const day = String(date.getDate()).padStart(2, '0');
+            const dateString = `${year}-${month}-${day}`;
+            setNewReminder({...newReminder, dueDate: dateString});
+          } else {
+            setNewReminder({...newReminder, dueDate: ''});
+          }
+        }}
+      />
 
       {/* Category Picker */}
       <CategoryPicker
@@ -1184,6 +1383,135 @@ const styles = StyleSheet.create({
     width: 12,
     height: 12,
     borderRadius: 6,
+  },
+  dateButton: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 12,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#C7C7CC',
+    backgroundColor: '#fff',
+  },
+  dateButtonText: {
+    fontSize: 16,
+    color: '#000',
+  },
+  placeholderText: {
+    color: '#999',
+  },
+  datePickerModal: {
+    backgroundColor: '#fff',
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    maxHeight: '70%',
+    minHeight: 400,
+  },
+  calendarHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E5EA',
+  },
+  monthNavButton: {
+    padding: 8,
+    minWidth: 44,
+    alignItems: 'center',
+  },
+  navButtonText: {
+    fontSize: 24,
+    color: '#007AFF',
+    fontWeight: 'bold',
+  },
+  monthYearText: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#000',
+  },
+  weekDaysHeader: {
+    flexDirection: 'row',
+    paddingHorizontal: 20,
+    paddingVertical: 8,
+    backgroundColor: '#F8F9FA',
+  },
+  weekDayText: {
+    flex: 1,
+    textAlign: 'center',
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#666',
+  },
+  calendarGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    paddingHorizontal: 20,
+    paddingVertical: 8,
+  },
+  calendarDay: {
+    width: `${100/7}%`,
+    aspectRatio: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginVertical: 2,
+  },
+  selectedDay: {
+    backgroundColor: '#007AFF',
+    borderRadius: 20,
+  },
+  todayDay: {
+    backgroundColor: '#E3F2FD',
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: '#007AFF',
+  },
+  calendarDayText: {
+    fontSize: 16,
+    color: '#000',
+  },
+  selectedDayText: {
+    color: '#fff',
+    fontWeight: 'bold',
+  },
+  todayDayText: {
+    color: '#007AFF',
+    fontWeight: 'bold',
+  },
+  datePickerActions: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    borderTopWidth: 1,
+    borderTopColor: '#E5E5EA',
+  },
+  clearDateButton: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+  },
+  clearDateText: {
+    fontSize: 16,
+    color: '#FF3B30',
+  },
+  todayButton: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    backgroundColor: '#007AFF',
+    borderRadius: 8,
+  },
+  todayButtonText: {
+    fontSize: 16,
+    color: '#fff',
+    fontWeight: '600',
+  },
+  pickerSave: {
+    fontSize: 16,
+    color: '#007AFF',
+    fontWeight: '600',
   },
 });
 
