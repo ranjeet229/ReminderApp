@@ -1,6 +1,6 @@
 ## Download Link
 
-[Click here to download for android](https://drive.google.com/file/d/1OV0uOeyfyaCCDKn3n2vJWD132-B7KPqf/view?usp=sharing)
+[Click here to download APK for android](https://drive.google.com/file/d/1OV0uOeyfyaCCDKn3n2vJWD132-B7KPqf/view?usp=sharing)
 
 
 This is a new [**React Native**](https://reactnative.dev) project, bootstrapped using [`@react-native-community/cli`](https://github.com/react-native-community/cli).
