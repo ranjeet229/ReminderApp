@@ -21,25 +21,32 @@ import PushNotificationIOS from '@react-native-community/push-notification-ios';
 // Simple text-based icons component
 const Icon = ({ name, size = 24, color = '#000' }) => {
   const iconMap = {
-    'bell': '🔔',
-    'plus': '+',
-    'check': '✓',
-    'x': '✕',
+    bell: '🔔',
+    plus: '+',
+    check: '✓',
+    x: '✕',
     'edit-3': '✏️',
     'trash-2': '🗑️',
-    'calendar': '📋',
-    'clock': '⏰',
+    calendar: '📋',
+    clock: '⏰',
     'alert-circle': '⚠️',
-    'star': '⭐',
-    'filter': '🔍',
+    star: '⭐',
+    filter: '🔍',
     'chevron-down': '▼',
     'chevron-up': '▲',
   };
-  
+
   const icon = iconMap[name] || '•';
-  
+
   return (
-    <Text style={{ fontSize: size * 0.8, color, textAlign: 'center', minWidth: size }}>
+    <Text
+      style={{
+        fontSize: size * 0.8,
+        color,
+        textAlign: 'center',
+        minWidth: size,
+      }}
+    >
       {icon}
     </Text>
   );
@@ -54,7 +61,7 @@ const ReminderApp = () => {
     category: 'personal',
     priority: 'medium',
     dueDate: '',
-    dueTime: ''
+    dueTime: '',
   });
   const [editingId, setEditingId] = useState(null);
   const [editingReminder, setEditingReminder] = useState({});
@@ -67,8 +74,13 @@ const ReminderApp = () => {
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [showTimePicker, setShowTimePicker] = useState(false);
   const [selectedDate, setSelectedDate] = useState(new Date());
-  const [selectedTime, setSelectedTime] = useState({ hours: new Date().getHours(), minutes: new Date().getMinutes() });
+  const [selectedTime, setSelectedTime] = useState({
+    hours: new Date().getHours(),
+    minutes: new Date().getMinutes(),
+  });
   const [appState, setAppState] = useState(AppState.currentState);
+  const [isFilterPickerForCategory, setIsFilterPickerForCategory] =
+    useState(true);
 
   const categories = [
     { id: 'personal', name: 'Personal', color: '#007AFF' },
@@ -80,26 +92,26 @@ const ReminderApp = () => {
   const priorities = [
     { id: 'low', name: 'Low', color: '#8E8E93' },
     { id: 'medium', name: 'Medium', color: '#FF9500' },
-    { id: 'high', name: 'High', color: '#FF3B30' }
+    { id: 'high', name: 'High', color: '#FF3B30' },
   ];
 
   // Initialize push notifications
   useEffect(() => {
     // Create notification channel for Android
     if (Platform.OS === 'android') {
-    PushNotification.createChannel(
-      {
-        channelId: "reminder-channel",
-        channelName: "Task Reminders",
-        channelDescription: "Notifications for pending tasks and reminders",
-        playSound: true,
-        soundName: "default",
-        importance: 4,
-        vibrate: true,
-      },
-      (created) => console.log(`createChannel returned '${created}'`)
-    );
-  }
+      PushNotification.createChannel(
+        {
+          channelId: 'reminder-channel',
+          channelName: 'Task Reminders',
+          channelDescription: 'Notifications for pending tasks and reminders',
+          playSound: true,
+          soundName: 'default',
+          importance: 4,
+          vibrate: true,
+        },
+        created => console.log(`createChannel returned '${created}'`),
+      );
+    }
 
     PushNotification.configure({
       onRegister: function (token) {
@@ -107,7 +119,7 @@ const ReminderApp = () => {
       },
       onNotification: function (notification) {
         console.log('NOTIFICATION:', notification);
-        
+
         // Handle notification actions
         if (notification.action === 'Mark Complete') {
           const reminderId = notification.userInfo?.reminderId;
@@ -129,7 +141,7 @@ const ReminderApp = () => {
         console.log('ACTION:', notification.action);
         console.log('NOTIFICATION:', notification);
       },
-      onRegistrationError: function(err) {
+      onRegistrationError: function (err) {
         console.error(err.message, err);
       },
       permissions: {
@@ -143,7 +155,9 @@ const ReminderApp = () => {
 
     // Request Android permissions
     if (Platform.OS === 'android') {
-      PermissionsAndroid.request(PermissionsAndroid.PERMISSIONS.POST_NOTIFICATIONS);
+      PermissionsAndroid.request(
+        PermissionsAndroid.PERMISSIONS.POST_NOTIFICATIONS,
+      );
     }
 
     return () => {
@@ -154,7 +168,7 @@ const ReminderApp = () => {
 
   // Handle app state changes to check for overdue reminders
   useEffect(() => {
-    const handleAppStateChange = (nextAppState) => {
+    const handleAppStateChange = nextAppState => {
       if (appState.match(/inactive|background/) && nextAppState === 'active') {
         // App has come to foreground, check for overdue reminders
         checkOverdueReminders();
@@ -162,127 +176,146 @@ const ReminderApp = () => {
       setAppState(nextAppState);
     };
 
-    const subscription = AppState.addEventListener('change', handleAppStateChange);
+    const subscription = AppState.addEventListener(
+      'change',
+      handleAppStateChange,
+    );
     return () => subscription?.remove();
   }, [appState, reminders]);
 
-  // Check for overdue reminders periodically
+  // Enhanced real-time notification checking
   useEffect(() => {
-    const interval = setInterval(() => {
+    const checkInterval = setInterval(() => {
       checkOverdueReminders();
-    }, 30000); // Check every 30 seconds
+    }, 10000); // Check every 10 seconds for more accuracy
 
-    return () => clearInterval(interval);
+    return () => clearInterval(checkInterval);
   }, [reminders]);
 
+  // Enhanced overdue reminder checking
   const checkOverdueReminders = () => {
     const now = new Date();
-    
+
     reminders.forEach(reminder => {
-      if (!reminder.completed && reminder.dueDate && !reminder.notificationSent) {
-        const dueDateTime = new Date(`${reminder.dueDate}T${reminder.dueTime || '09:00'}:00`);
-        
+      if (
+        !reminder.completed &&
+        reminder.dueDate &&
+        !reminder.notificationSent
+      ) {
+        const dueDateTime = new Date(
+          `${reminder.dueDate}T${reminder.dueTime || '09:00'}:00`,
+        );
+
+        // Check if current time has passed the due time
         if (now >= dueDateTime) {
           sendOverdueNotification(reminder);
           // Mark as notification sent to avoid spam
-          setReminders(prevReminders => 
-            prevReminders.map(r => 
-              r.id === reminder.id ? { ...r, notificationSent: true } : r
-            )
+          setReminders(prevReminders =>
+            prevReminders.map(r =>
+              r.id === reminder.id ? { ...r, notificationSent: true } : r,
+            ),
           );
         }
       }
     });
   };
 
-  const sendOverdueNotification = (reminder) => {
+  const sendOverdueNotification = reminder => {
     const notificationId = parseInt(reminder.id);
-    
+
     PushNotification.localNotification({
       id: notificationId,
-      channelId: "reminder-channel", // Required for Android
-      title: "Task Pending! ⚠️",
+      channelId: 'reminder-channel',
+      title: 'Task Pending! ⚠️',
       message: `Your task is pending: ${reminder.text}`,
-      bigText: `Task: ${reminder.text}\nCategory: ${reminder.category}\nPriority: ${reminder.priority.toUpperCase()}\n\nThis task was due and is still incomplete. Please complete it soon!`,
-      subText: "Overdue Task",
+      bigText: `Task: ${reminder.text}\nCategory: ${
+        reminder.category
+      }\nPriority: ${reminder.priority.toUpperCase()}\n\nThis task was due and is still incomplete. Please complete it soon!`,
+      subText: 'Overdue Task',
       vibrate: true,
       vibration: 300,
       playSound: true,
       soundName: 'default',
-      actions: ["Mark Complete", "Snooze"],
+      actions: ['Mark Complete', 'Snooze'],
       invokeApp: true,
-      userInfo: { 
+      userInfo: {
         reminderId: reminder.id,
-        type: 'overdue_reminder'
+        type: 'overdue_reminder',
       },
-      // Android specific
-      largeIcon: "ic_launcher",
-      smallIcon: "ic_notification",
-      priority: "high",
-      importance: "high",
+      largeIcon: 'ic_launcher',
+      smallIcon: 'ic_notification',
+      priority: 'high',
+      importance: 'high',
     });
   };
 
-  const scheduleNotification = (reminder) => {
+  const scheduleNotification = reminder => {
     if (reminder.dueDate) {
-      const dueDateTime = new Date(`${reminder.dueDate}T${reminder.dueTime || '09:00'}:00`);
+      const dueDateTime = new Date(
+        `${reminder.dueDate}T${reminder.dueTime || '09:00'}:00`,
+      );
       const now = new Date();
-      
-      const triggerTime = dueDateTime.getTime();
 
-      if (triggerTime > now.getTime()) {
+      if (dueDateTime.getTime() > now.getTime()) {
         const notificationId = parseInt(reminder.id);
-        
+
         PushNotification.localNotificationSchedule({
           id: notificationId,
-          channelId: "reminder-channel", // Required for Android
-          title: "Task Reminder 📋",
-          message: `Your task is pending: ${reminder.text}`,
-          bigText: `Task: ${reminder.text}\nCategory: ${reminder.category}\nPriority: ${reminder.priority.toUpperCase()}\n\nDon't forget to complete this task!`,
-          subText: "RemindMe",
-          date: new Date(triggerTime),
-          allowWhileIdle:true,
+          channelId: 'reminder-channel',
+          title: 'Task Reminder 📋',
+          message: `Your task is due: ${reminder.text}`,
+          bigText: `Task: ${reminder.text}\nCategory: ${
+            reminder.category
+          }\nPriority: ${reminder.priority.toUpperCase()}\n\nDon't forget to complete this task!`,
+          subText: 'RemindMe',
+          date: dueDateTime,
+          allowWhileIdle: true,
           vibrate: true,
           vibration: 300,
           playSound: true,
-          allowWhileIdle: true,
           soundName: 'default',
-          actions: ["Mark Complete", "Snooze"],
-          userInfo: { 
+          actions: ['Mark Complete', 'Snooze'],
+          userInfo: {
             reminderId: reminder.id,
-            type: 'scheduled_reminder'
+            type: 'scheduled_reminder',
           },
-          // Android specific
-          largeIcon: "ic_launcher",
-          smallIcon: "ic_notification",
-          priority: "high",
-          importance: "high",
+          largeIcon: 'ic_launcher',
+          smallIcon: 'ic_notification',
+          priority: 'high',
+          importance: 'high',
         });
+      } else {
+        // If the time has already passed, immediately send overdue notification
+        setTimeout(() => sendOverdueNotification(reminder), 1000);
       }
     }
   };
 
-  const snoozeReminder = (reminderId) => {
+  const snoozeReminder = reminderId => {
     // Snooze for 10 minutes
     const snoozeTime = new Date(Date.now() + 10 * 60 * 1000);
     const notificationId = parseInt(reminderId);
-    
+
     const reminder = reminders.find(r => r.id === reminderId);
     if (reminder) {
       PushNotification.localNotificationSchedule({
         id: notificationId + 1000, // Different ID for snooze
-        channelId: "reminder-channel",
-        title: "Snoozed Task Reminder 😴",
+        channelId: 'reminder-channel',
+        title: 'Snoozed Task Reminder 😴',
         message: `Your snoozed task is still pending: ${reminder.text}`,
-        bigText: `This task was snoozed but still needs your attention!\n\nTask: ${reminder.text}\nCategory: ${reminder.category}\nPriority: ${reminder.priority.toUpperCase()}`,
-        subText: "Snoozed",
+        bigText: `This task was snoozed but still needs your attention!\n\nTask: ${
+          reminder.text
+        }\nCategory: ${
+          reminder.category
+        }\nPriority: ${reminder.priority.toUpperCase()}`,
+        subText: 'Snoozed',
         date: snoozeTime,
         vibrate: true,
         playSound: true,
-        actions: ["Mark Complete", "Snooze"],
-        userInfo: { 
+        actions: ['Mark Complete', 'Snooze'],
+        userInfo: {
           reminderId: reminder.id,
-          type: 'snoozed_reminder'
+          type: 'snoozed_reminder',
         },
       });
     }
@@ -291,11 +324,10 @@ const ReminderApp = () => {
   // Check for today's pending reminders
   useEffect(() => {
     const today = new Date().toISOString().split('T')[0];
-    const todaysPending = reminders.filter(r => 
-      !r.completed && 
-      r.dueDate === today
+    const todaysPending = reminders.filter(
+      r => !r.completed && r.dueDate === today,
     );
-    
+
     if (todaysPending.length > 0) {
       const timer = setTimeout(() => setShowMessageOfDay(true), 1000);
       return () => clearTimeout(timer);
@@ -307,7 +339,7 @@ const ReminderApp = () => {
       Alert.alert('Error', 'Please enter a reminder text');
       return;
     }
-    
+
     const reminder = {
       id: Date.now().toString(),
       text: newReminder.text.trim(),
@@ -317,73 +349,87 @@ const ReminderApp = () => {
       dueTime: newReminder.dueTime,
       completed: false,
       createdAt: new Date().toLocaleDateString(),
-      notificationSent: false
+      notificationSent: false,
     };
-    
+
     setReminders([reminder, ...reminders]);
-    
+
     // Schedule notification if due date/time is set
     scheduleNotification(reminder);
-    
+
     setNewReminder({
       text: '',
       category: 'personal',
       priority: 'medium',
       dueDate: '',
-      dueTime: ''
+      dueTime: '',
     });
     setShowAddModal(false);
 
     // Show confirmation
     Alert.alert(
       'Reminder Added!',
-      reminder.dueDate 
-        ? `Your reminder has been scheduled for ${new Date(reminder.dueDate).toLocaleDateString()}${reminder.dueTime ? ` at ${reminder.dueTime}` : ''}`
-        : 'Your reminder has been added successfully'
+      reminder.dueDate
+        ? `Your reminder has been scheduled for ${new Date(
+            reminder.dueDate,
+          ).toLocaleDateString()}${
+            reminder.dueTime ? ` at ${reminder.dueTime}` : ''
+          }`
+        : 'Your reminder has been added successfully',
     );
   };
 
-  const toggleComplete = (id) => {
-    setReminders(prevReminders => 
+  const toggleComplete = id => {
+    setReminders(prevReminders =>
       prevReminders.map(reminder => {
         if (reminder.id === id) {
-          const updatedReminder = { ...reminder, completed: !reminder.completed };
-          
+          const updatedReminder = {
+            ...reminder,
+            completed: !reminder.completed,
+          };
+
           // Cancel scheduled notifications when marking as complete
           if (updatedReminder.completed) {
             PushNotification.cancelLocalNotifications({ id: parseInt(id) });
-            PushNotification.cancelLocalNotifications({ id: parseInt(id) + 1000 }); // Cancel snooze too
+            PushNotification.cancelLocalNotifications({
+              id: parseInt(id) + 1000,
+            }); // Cancel snooze too
+          } else {
+            // Re-schedule notification if marking as incomplete
+            scheduleNotification(updatedReminder);
           }
-          
+
           return updatedReminder;
         }
         return reminder;
-      })
+      }),
     );
   };
 
-  const deleteReminder = (id) => {
+  const deleteReminder = id => {
     Alert.alert(
       'Delete Reminder',
       'Are you sure you want to delete this reminder?',
       [
         { text: 'Cancel', style: 'cancel' },
-        { 
-          text: 'Delete', 
+        {
+          text: 'Delete',
           style: 'destructive',
           onPress: () => {
             // Cancel any scheduled notifications for this reminder
             PushNotification.cancelLocalNotifications({ id: parseInt(id) });
-            PushNotification.cancelLocalNotifications({ id: parseInt(id) + 1000 }); // Cancel snooze too
-            
+            PushNotification.cancelLocalNotifications({
+              id: parseInt(id) + 1000,
+            }); // Cancel snooze too
+
             setReminders(reminders.filter(reminder => reminder.id !== id));
-          }
-        }
-      ]
+          },
+        },
+      ],
     );
   };
 
-  const startEditing = (reminder) => {
+  const startEditing = reminder => {
     setEditingId(reminder.id);
     setEditingReminder({ ...reminder });
   };
@@ -393,29 +439,35 @@ const ReminderApp = () => {
       Alert.alert('Error', 'Reminder text cannot be empty');
       return;
     }
-    
-    setReminders(reminders.map(reminder => {
-      if (reminder.id === editingId) {
-        // Cancel old notifications
-        PushNotification.cancelLocalNotifications({ id: parseInt(editingId) });
-        PushNotification.cancelLocalNotifications({ id: parseInt(editingId) + 1000 });
-        
-        const updatedReminder = { 
-          ...editingReminder, 
-          text: editingReminder.text.trim(),
-          notificationSent: false // Reset notification status
-        };
-        
-        // Reschedule if there's a due date
-        if (updatedReminder.dueDate && !updatedReminder.completed) {
-          scheduleNotification(updatedReminder);
+
+    setReminders(
+      reminders.map(reminder => {
+        if (reminder.id === editingId) {
+          // Cancel old notifications
+          PushNotification.cancelLocalNotifications({
+            id: parseInt(editingId),
+          });
+          PushNotification.cancelLocalNotifications({
+            id: parseInt(editingId) + 1000,
+          });
+
+          const updatedReminder = {
+            ...editingReminder,
+            text: editingReminder.text.trim(),
+            notificationSent: false, // Reset notification status
+          };
+
+          // Reschedule if there's a due date
+          if (updatedReminder.dueDate && !updatedReminder.completed) {
+            scheduleNotification(updatedReminder);
+          }
+
+          return updatedReminder;
         }
-        
-        return updatedReminder;
-      }
-      return reminder;
-    }));
-    
+        return reminder;
+      }),
+    );
+
     setEditingId(null);
     setEditingReminder({});
   };
@@ -425,64 +477,74 @@ const ReminderApp = () => {
     setEditingReminder({});
   };
 
-  const getCategoryColor = (categoryId) => {
+  const getCategoryColor = categoryId => {
     const category = categories.find(c => c.id === categoryId);
     return category ? category.color : '#007AFF';
   };
 
-  const getPriorityColor = (priorityId) => {
+  const getPriorityColor = priorityId => {
     const priority = priorities.find(p => p.id === priorityId);
     return priority ? priority.color : '#8E8E93';
   };
 
-  const isOverdue = (dueDate) => {
+  const isOverdue = dueDate => {
     if (!dueDate) return false;
     const today = new Date();
     const due = new Date(dueDate);
     return due < today;
   };
 
-  const isDueToday = (dueDate) => {
+  const isDueToday = dueDate => {
     if (!dueDate) return false;
     const today = new Date().toISOString().split('T')[0];
     return dueDate === today;
   };
 
+  // Fixed filtering logic
   const filteredReminders = reminders.filter(reminder => {
-  if (filterCategory !== 'all' && reminder.category !== filterCategory) return false;
-  if (filterPriority !== 'all' && reminder.priority !== filterPriority) return false;
-  return true;
-});
+    if (filterCategory !== 'all' && reminder.category !== filterCategory)
+      return false;
+    if (filterPriority !== 'all' && reminder.priority !== filterPriority)
+      return false;
+    return true;
+  });
 
   const sortedReminders = [...filteredReminders].sort((a, b) => {
     // Sort by completion status first
     if (a.completed !== b.completed) {
       return a.completed ? 1 : -1;
     }
-    
+
     // Then by priority
     const priorityOrder = { high: 3, medium: 2, low: 1 };
     const priorityDiff = priorityOrder[b.priority] - priorityOrder[a.priority];
     if (priorityDiff !== 0) return priorityDiff;
-    
+
     // Then by due date
     if (a.dueDate && b.dueDate) {
       return new Date(a.dueDate) - new Date(b.dueDate);
     }
     if (a.dueDate && !b.dueDate) return -1;
     if (!a.dueDate && b.dueDate) return 1;
-    
+
     return 0;
   });
 
-  const todaysPendingReminders = reminders.filter(r => 
-    !r.completed && isDueToday(r.dueDate)
+  const todaysPendingReminders = reminders.filter(
+    r => !r.completed && isDueToday(r.dueDate),
   );
 
   const completedCount = reminders.filter(r => r.completed).length;
   const totalCount = reminders.length;
 
-  const CategoryPicker = ({ visible, onClose, selectedValue, onSelect }) => (
+  // Fixed Category Picker with "All Categories" option
+  const CategoryPicker = ({
+    visible,
+    onClose,
+    selectedValue,
+    onSelect,
+    isForFilter = false,
+  }) => (
     <Modal visible={visible} transparent animationType="fade">
       <View style={styles.pickerOverlay}>
         <View style={styles.pickerModal}>
@@ -494,21 +556,45 @@ const ReminderApp = () => {
             <View style={{ width: 60 }} />
           </View>
           <ScrollView style={styles.pickerContent}>
+            {isForFilter && (
+              <TouchableOpacity
+                style={[
+                  styles.pickerItem,
+                  selectedValue === 'all' && styles.pickerItemSelected,
+                ]}
+                onPress={() => {
+                  onSelect('all');
+                  onClose();
+                }}
+              >
+                <View
+                  style={[styles.categoryDot, { backgroundColor: '#8E8E93' }]}
+                />
+                <Text style={styles.pickerItemText}>All Categories</Text>
+                {selectedValue === 'all' && (
+                  <Icon name="check" size={16} color="#007AFF" />
+                )}
+              </TouchableOpacity>
+            )}
             {categories.map(cat => (
               <TouchableOpacity
                 key={cat.id}
                 style={[
                   styles.pickerItem,
-                  selectedValue === cat.id && styles.pickerItemSelected
+                  selectedValue === cat.id && styles.pickerItemSelected,
                 ]}
                 onPress={() => {
                   onSelect(cat.id);
                   onClose();
                 }}
               >
-                <View style={[styles.categoryDot, { backgroundColor: cat.color }]} />
+                <View
+                  style={[styles.categoryDot, { backgroundColor: cat.color }]}
+                />
                 <Text style={styles.pickerItemText}>{cat.name}</Text>
-                {selectedValue === cat.id && <Icon name="check" size={16} color="#007AFF" />}
+                {selectedValue === cat.id && (
+                  <Icon name="check" size={16} color="#007AFF" />
+                )}
               </TouchableOpacity>
             ))}
           </ScrollView>
@@ -517,7 +603,14 @@ const ReminderApp = () => {
     </Modal>
   );
 
-  const PriorityPicker = ({ visible, onClose, selectedValue, onSelect }) => (
+  // Fixed Priority Picker with "All Priorities" option
+  const PriorityPicker = ({
+    visible,
+    onClose,
+    selectedValue,
+    onSelect,
+    isForFilter = false,
+  }) => (
     <Modal visible={visible} transparent animationType="fade">
       <View style={styles.pickerOverlay}>
         <View style={styles.pickerModal}>
@@ -529,21 +622,45 @@ const ReminderApp = () => {
             <View style={{ width: 60 }} />
           </View>
           <ScrollView style={styles.pickerContent}>
+            {isForFilter && (
+              <TouchableOpacity
+                style={[
+                  styles.pickerItem,
+                  selectedValue === 'all' && styles.pickerItemSelected,
+                ]}
+                onPress={() => {
+                  onSelect('all');
+                  onClose();
+                }}
+              >
+                <View
+                  style={[styles.priorityDot, { backgroundColor: '#8E8E93' }]}
+                />
+                <Text style={styles.pickerItemText}>All Priorities</Text>
+                {selectedValue === 'all' && (
+                  <Icon name="check" size={16} color="#007AFF" />
+                )}
+              </TouchableOpacity>
+            )}
             {priorities.map(pri => (
               <TouchableOpacity
                 key={pri.id}
                 style={[
                   styles.pickerItem,
-                  selectedValue === pri.id && styles.pickerItemSelected
+                  selectedValue === pri.id && styles.pickerItemSelected,
                 ]}
                 onPress={() => {
                   onSelect(pri.id);
                   onClose();
                 }}
               >
-                <View style={[styles.priorityDot, { backgroundColor: pri.color }]} />
+                <View
+                  style={[styles.priorityDot, { backgroundColor: pri.color }]}
+                />
                 <Text style={styles.pickerItemText}>{pri.name}</Text>
-                {selectedValue === pri.id && <Icon name="check" size={16} color="#007AFF" />}
+                {selectedValue === pri.id && (
+                  <Icon name="check" size={16} color="#007AFF" />
+                )}
               </TouchableOpacity>
             ))}
           </ScrollView>
@@ -582,17 +699,19 @@ const ReminderApp = () => {
             key={i}
             style={[
               styles.timePickerItem,
-              tempHours === i && styles.selectedTimeItem
+              tempHours === i && styles.selectedTimeItem,
             ]}
             onPress={() => setTempHours(i)}
           >
-            <Text style={[
-              styles.timePickerText,
-              tempHours === i && styles.selectedTimeText
-            ]}>
+            <Text
+              style={[
+                styles.timePickerText,
+                tempHours === i && styles.selectedTimeText,
+              ]}
+            >
               {i.toString().padStart(2, '0')}
             </Text>
-          </TouchableOpacity>
+          </TouchableOpacity>,
         );
       }
       return hours;
@@ -600,23 +719,25 @@ const ReminderApp = () => {
 
     const renderMinutes = () => {
       const minutes = [];
-      for (let i = 0; i < 60; i += 5) { // 5-minute intervals
+      for (let i = 0; i < 60; i += 5) {
         minutes.push(
           <TouchableOpacity
             key={i}
             style={[
               styles.timePickerItem,
-              tempMinutes === i && styles.selectedTimeItem
+              tempMinutes === i && styles.selectedTimeItem,
             ]}
             onPress={() => setTempMinutes(i)}
           >
-            <Text style={[
-              styles.timePickerText,
-              tempMinutes === i && styles.selectedTimeText
-            ]}>
+            <Text
+              style={[
+                styles.timePickerText,
+                tempMinutes === i && styles.selectedTimeText,
+              ]}
+            >
               {i.toString().padStart(2, '0')}
             </Text>
-          </TouchableOpacity>
+          </TouchableOpacity>,
         );
       }
       return minutes;
@@ -635,7 +756,7 @@ const ReminderApp = () => {
                 <Text style={styles.pickerSave}>Save</Text>
               </TouchableOpacity>
             </View>
-            
+
             <View style={styles.timePreview}>
               <Text style={styles.timePreviewText}>
                 {formatTime(tempHours, tempMinutes)}
@@ -645,16 +766,22 @@ const ReminderApp = () => {
             <View style={styles.timePickerContent}>
               <View style={styles.timeColumn}>
                 <Text style={styles.timeColumnHeader}>Hour</Text>
-                <ScrollView style={styles.timeScroll} showsVerticalScrollIndicator={false}>
+                <ScrollView
+                  style={styles.timeScroll}
+                  showsVerticalScrollIndicator={false}
+                >
                   {renderHours()}
                 </ScrollView>
               </View>
-              
+
               <Text style={styles.timeSeparator}>:</Text>
-              
+
               <View style={styles.timeColumn}>
                 <Text style={styles.timeColumnHeader}>Minutes</Text>
-                <ScrollView style={styles.timeScroll} showsVerticalScrollIndicator={false}>
+                <ScrollView
+                  style={styles.timeScroll}
+                  showsVerticalScrollIndicator={false}
+                >
                   {renderMinutes()}
                 </ScrollView>
               </View>
@@ -675,7 +802,7 @@ const ReminderApp = () => {
                 onPress={() => {
                   const now = new Date();
                   setTempHours(now.getHours());
-                  setTempMinutes(Math.floor(now.getMinutes() / 5) * 5); // Round to nearest 5 minutes
+                  setTempMinutes(Math.floor(now.getMinutes() / 5) * 5);
                 }}
               >
                 <Text style={styles.nowButtonText}>Now</Text>
@@ -702,15 +829,25 @@ const ReminderApp = () => {
     }, [visible, selectedDate]);
 
     const months = [
-      'January', 'February', 'March', 'April', 'May', 'June',
-      'July', 'August', 'September', 'October', 'November', 'December'
+      'January',
+      'February',
+      'March',
+      'April',
+      'May',
+      'June',
+      'July',
+      'August',
+      'September',
+      'October',
+      'November',
+      'December',
     ];
 
     const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
     const firstDayOfMonth = new Date(currentYear, currentMonth, 1).getDay();
     const today = new Date();
-    
-    const handleDateSelect = (day) => {
+
+    const handleDateSelect = day => {
       const newDate = new Date(currentYear, currentMonth, day);
       setTempDate(newDate);
     };
@@ -748,13 +885,15 @@ const ReminderApp = () => {
 
       // Add days of the month
       for (let day = 1; day <= daysInMonth; day++) {
-        const isSelected = tempDate && 
-          tempDate.getDate() === day && 
-          tempDate.getMonth() === currentMonth && 
+        const isSelected =
+          tempDate &&
+          tempDate.getDate() === day &&
+          tempDate.getMonth() === currentMonth &&
           tempDate.getFullYear() === currentYear;
-        
-        const isToday = today.getDate() === day && 
-          today.getMonth() === currentMonth && 
+
+        const isToday =
+          today.getDate() === day &&
+          today.getMonth() === currentMonth &&
           today.getFullYear() === currentYear;
 
         days.push(
@@ -763,18 +902,20 @@ const ReminderApp = () => {
             style={[
               styles.calendarDay,
               isSelected && styles.selectedDay,
-              isToday && !isSelected && styles.todayDay
+              isToday && !isSelected && styles.todayDay,
             ]}
             onPress={() => handleDateSelect(day)}
           >
-            <Text style={[
-              styles.calendarDayText,
-              isSelected && styles.selectedDayText,
-              isToday && !isSelected && styles.todayDayText
-            ]}>
+            <Text
+              style={[
+                styles.calendarDayText,
+                isSelected && styles.selectedDayText,
+                isToday && !isSelected && styles.todayDayText,
+              ]}
+            >
               {day}
             </Text>
-          </TouchableOpacity>
+          </TouchableOpacity>,
         );
       }
 
@@ -794,28 +935,34 @@ const ReminderApp = () => {
                 <Text style={styles.pickerSave}>Save</Text>
               </TouchableOpacity>
             </View>
-            
+
             <View style={styles.calendarHeader}>
-              <TouchableOpacity style={styles.monthNavButton} onPress={prevMonth}>
+              <TouchableOpacity
+                style={styles.monthNavButton}
+                onPress={prevMonth}
+              >
                 <Icon name="chevron-up" size={20} color="#007AFF" />
               </TouchableOpacity>
               <Text style={styles.monthYearText}>
                 {months[currentMonth]} {currentYear}
               </Text>
-              <TouchableOpacity style={styles.monthNavButton} onPress={nextMonth}>
+              <TouchableOpacity
+                style={styles.monthNavButton}
+                onPress={nextMonth}
+              >
                 <Icon name="chevron-down" size={20} color="#007AFF" />
               </TouchableOpacity>
             </View>
 
             <View style={styles.weekDaysHeader}>
               {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => (
-                <Text key={day} style={styles.weekDayText}>{day}</Text>
+                <Text key={day} style={styles.weekDayText}>
+                  {day}
+                </Text>
               ))}
             </View>
 
-            <View style={styles.calendarGrid}>
-              {renderCalendarDays()}
-            </View>
+            <View style={styles.calendarGrid}>{renderCalendarDays()}</View>
 
             <View style={styles.datePickerActions}>
               <TouchableOpacity
@@ -848,7 +995,7 @@ const ReminderApp = () => {
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="light-content" backgroundColor="#007AFF" />
-      
+
       {/* Message of the Day Modal */}
       <Modal
         visible={showMessageOfDay && todaysPendingReminders.length > 0}
@@ -864,28 +1011,43 @@ const ReminderApp = () => {
                 <Icon name="x" size={20} color="#666" />
               </TouchableOpacity>
             </View>
-            
+
             <View style={styles.messageContent}>
               <Text style={styles.messageText}>
-                You have <Text style={styles.boldText}>{todaysPendingReminders.length}</Text> reminder
-                {todaysPendingReminders.length !== 1 ? 's' : ''} due today. 
-                Complete them before end of day! 🎯
+                You have{' '}
+                <Text style={styles.boldText}>
+                  {todaysPendingReminders.length}
+                </Text>{' '}
+                reminder
+                {todaysPendingReminders.length !== 1 ? 's' : ''} due today.
+                Complete them before end of day!
               </Text>
-              
-              <ScrollView style={styles.todaysReminders} showsVerticalScrollIndicator={false}>
+
+              <ScrollView
+                style={styles.todaysReminders}
+                showsVerticalScrollIndicator={false}
+              >
                 {todaysPendingReminders.map((reminder, index) => (
                   <View key={reminder.id} style={styles.todayReminderItem}>
-                    <View style={[
-                      styles.categoryDot,
-                      { backgroundColor: getCategoryColor(reminder.category) }
-                    ]} />
+                    <View
+                      style={[
+                        styles.categoryDot,
+                        {
+                          backgroundColor: getCategoryColor(reminder.category),
+                        },
+                      ]}
+                    />
                     <Text style={styles.todayReminderText}>
                       {index + 1}. {reminder.text}
                     </Text>
-                    <View style={[
-                      styles.priorityBadge,
-                      { backgroundColor: getPriorityColor(reminder.priority) }
-                    ]}>
+                    <View
+                      style={[
+                        styles.priorityBadge,
+                        {
+                          backgroundColor: getPriorityColor(reminder.priority),
+                        },
+                      ]}
+                    >
                       <Text style={styles.priorityBadgeText}>
                         {reminder.priority.toUpperCase()}
                       </Text>
@@ -893,12 +1055,14 @@ const ReminderApp = () => {
                   </View>
                 ))}
               </ScrollView>
-              
-              <TouchableOpacity 
+
+              <TouchableOpacity
                 style={styles.gotItButton}
                 onPress={() => setShowMessageOfDay(false)}
               >
-                <Text style={styles.gotItButtonText}>Got it! Let's do this! 💪</Text>
+                <Text style={styles.gotItButtonText}>
+                  Got it! Let's do this!
+                </Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -912,14 +1076,14 @@ const ReminderApp = () => {
             <Icon name="bell" size={24} color="#fff" />
             <Text style={styles.headerTitle}>Remind Me</Text>
           </View>
-          <TouchableOpacity 
+          <TouchableOpacity
             style={styles.addButton}
             onPress={() => setShowAddModal(true)}
           >
             <Icon name="plus" size={24} color="#fff" />
           </TouchableOpacity>
         </View>
-        
+
         {totalCount > 0 && (
           <View style={styles.statsContainer}>
             <Text style={styles.statsText}>
@@ -942,23 +1106,31 @@ const ReminderApp = () => {
         <View style={styles.filterContainer}>
           <View style={styles.filterGroup}>
             <Icon name="filter" size={16} color="#666" />
-            <TouchableOpacity 
+            <TouchableOpacity
               style={styles.filterButton}
-              onPress={() => setShowCategoryPicker(true)}
+              onPress={() => {
+                setIsFilterPickerForCategory(true);
+                setShowCategoryPicker(true);
+              }}
             >
               <Text style={styles.filterText}>
-                {filterCategory === 'all' ? 'All Categories' : 
-                 categories.find(c => c.id === filterCategory)?.name}
+                {filterCategory === 'all'
+                  ? 'All Categories'
+                  : categories.find(c => c.id === filterCategory)?.name}
               </Text>
               <Icon name="chevron-down" size={16} color="#666" />
             </TouchableOpacity>
-            <TouchableOpacity 
+            <TouchableOpacity
               style={styles.filterButton}
-              onPress={() => setShowPriorityPicker(true)}
+              onPress={() => {
+                setIsFilterPickerForCategory(false);
+                setShowPriorityPicker(true);
+              }}
             >
               <Text style={styles.filterText}>
-                {filterPriority === 'all' ? 'All Priorities' : 
-                 priorities.find(p => p.id === filterPriority)?.name}
+                {filterPriority === 'all'
+                  ? 'All Priorities'
+                  : priorities.find(p => p.id === filterPriority)?.name}
               </Text>
               <Icon name="chevron-down" size={16} color="#666" />
             </TouchableOpacity>
@@ -972,33 +1144,45 @@ const ReminderApp = () => {
           <View style={styles.emptyState}>
             <Icon name="calendar" size={64} color="#C7C7CC" />
             <Text style={styles.emptyTitle}>
-              {reminders.length === 0 ? 'No reminders yet' : 'No matching reminders'}
+              {reminders.length === 0
+                ? 'No reminders yet'
+                : 'No matching reminders'}
             </Text>
             <Text style={styles.emptySubtitle}>
-              {reminders.length === 0 
+              {reminders.length === 0
                 ? 'Tap the + button to add your first reminder'
-                : 'Try adjusting your filters or add a new reminder'
-              }
+                : 'Try adjusting your filters or add a new reminder'}
             </Text>
           </View>
         ) : (
           <View style={styles.listContainer}>
-            {sortedReminders.map((reminder) => (
-              <View key={reminder.id} style={[
-                styles.reminderItem,
-                reminder.completed && styles.completedItem,
-                isOverdue(reminder.dueDate) && !reminder.completed && styles.overdueItem,
-                isDueToday(reminder.dueDate) && !reminder.completed && styles.dueTodayItem
-              ]}>
-                <TouchableOpacity 
+            {sortedReminders.map(reminder => (
+              <View
+                key={reminder.id}
+                style={[
+                  styles.reminderItem,
+                  reminder.completed && styles.completedItem,
+                  isOverdue(reminder.dueDate) &&
+                    !reminder.completed &&
+                    styles.overdueItem,
+                  isDueToday(reminder.dueDate) &&
+                    !reminder.completed &&
+                    styles.dueTodayItem,
+                ]}
+              >
+                <TouchableOpacity
                   style={styles.checkButton}
                   onPress={() => toggleComplete(reminder.id)}
                 >
-                  <View style={[
-                    styles.checkbox,
-                    reminder.completed && styles.checkedBox
-                  ]}>
-                    {reminder.completed && <Icon name="check" size={16} color="#fff" />}
+                  <View
+                    style={[
+                      styles.checkbox,
+                      reminder.completed && styles.checkedBox,
+                    ]}
+                  >
+                    {reminder.completed && (
+                      <Icon name="check" size={16} color="#fff" />
+                    )}
                   </View>
                 </TouchableOpacity>
 
@@ -1008,39 +1192,66 @@ const ReminderApp = () => {
                       <TextInput
                         style={styles.editInput}
                         value={editingReminder.text}
-                        onChangeText={(text) => setEditingReminder({...editingReminder, text})}
+                        onChangeText={text =>
+                          setEditingReminder({ ...editingReminder, text })
+                        }
                         multiline
                         autoFocus
                       />
                       <View style={styles.editRow}>
-                        <TouchableOpacity 
+                        <TouchableOpacity
                           style={styles.editSelect}
-                          onPress={() => setShowCategoryPicker(true)}
+                          onPress={() => {
+                            setIsFilterPickerForCategory(true);
+                            setShowCategoryPicker(true);
+                          }}
                         >
                           <Text style={styles.editSelectText}>
-                            {categories.find(c => c.id === editingReminder.category)?.name}
+                            {
+                              categories.find(
+                                c => c.id === editingReminder.category,
+                              )?.name
+                            }
                           </Text>
                         </TouchableOpacity>
-                        <TouchableOpacity 
+                        <TouchableOpacity
                           style={styles.editSelect}
-                          onPress={() => setShowPriorityPicker(true)}
+                          onPress={() => {
+                            setIsFilterPickerForCategory(false);
+                            setShowPriorityPicker(true);
+                          }}
                         >
                           <Text style={styles.editSelectText}>
-                            {priorities.find(p => p.id === editingReminder.priority)?.name}
+                            {
+                              priorities.find(
+                                p => p.id === editingReminder.priority,
+                              )?.name
+                            }
                           </Text>
                         </TouchableOpacity>
                       </View>
                       <TextInput
                         style={styles.editInput}
                         value={editingReminder.dueDate || ''}
-                        onChangeText={(date) => setEditingReminder({...editingReminder, dueDate: date})}
+                        onChangeText={date =>
+                          setEditingReminder({
+                            ...editingReminder,
+                            dueDate: date,
+                          })
+                        }
                         placeholder="YYYY-MM-DD"
                       />
                       <View style={styles.editButtons}>
-                        <TouchableOpacity style={styles.saveButton} onPress={saveEdit}>
+                        <TouchableOpacity
+                          style={styles.saveButton}
+                          onPress={saveEdit}
+                        >
                           <Icon name="check" size={16} color="#fff" />
                         </TouchableOpacity>
-                        <TouchableOpacity style={styles.cancelButton} onPress={cancelEdit}>
+                        <TouchableOpacity
+                          style={styles.cancelButton}
+                          onPress={cancelEdit}
+                        >
                           <Icon name="x" size={16} color="#fff" />
                         </TouchableOpacity>
                       </View>
@@ -1049,45 +1260,78 @@ const ReminderApp = () => {
                     <>
                       <View style={styles.reminderHeader}>
                         <View style={styles.reminderMeta}>
-                          <View style={[
-                            styles.categoryBadge,
-                            { backgroundColor: getCategoryColor(reminder.category) }
-                          ]}>
+                          <View
+                            style={[
+                              styles.categoryBadge,
+                              {
+                                backgroundColor: getCategoryColor(
+                                  reminder.category,
+                                ),
+                              },
+                            ]}
+                          >
                             <Text style={styles.categoryBadgeText}>
-                              {categories.find(c => c.id === reminder.category)?.name}
+                              {
+                                categories.find(c => c.id === reminder.category)
+                                  ?.name
+                              }
                             </Text>
                           </View>
-                          <View style={[
-                            styles.priorityIndicator,
-                            { backgroundColor: getPriorityColor(reminder.priority) }
-                          ]}>
-                            {reminder.priority === 'high' && 
+                          <View
+                            style={[
+                              styles.priorityIndicator,
+                              {
+                                backgroundColor: getPriorityColor(
+                                  reminder.priority,
+                                ),
+                              },
+                            ]}
+                          >
+                            {reminder.priority === 'high' && (
                               <Icon name="star" size={12} color="#fff" />
-                            }
+                            )}
                           </View>
                         </View>
                         {reminder.dueDate && (
                           <View style={styles.dueDateContainer}>
-                            {isOverdue(reminder.dueDate) && !reminder.completed && (
-                              <Text style={styles.overdueText}>OVERDUE</Text>
-                            )}
-                            {isDueToday(reminder.dueDate) && !reminder.completed && (
-                              <Text style={styles.todayText}>DUE TODAY</Text>
-                            )}
-                            <Text style={[
-                              styles.dueDateText,
-                              isOverdue(reminder.dueDate) && !reminder.completed && {color: '#FF3B30'},
-                              isDueToday(reminder.dueDate) && !reminder.completed && {color: '#FF9500', fontWeight: 'bold'}
-                            ]}>
+                            {isOverdue(reminder.dueDate) &&
+                              !reminder.completed && (
+                                <Text style={styles.overdueText}>OVERDUE</Text>
+                              )}
+                            {isDueToday(reminder.dueDate) &&
+                              !reminder.completed && (
+                                <Text style={styles.todayText}>DUE TODAY</Text>
+                              )}
+                            <Text
+                              style={[
+                                styles.dueDateText,
+                                isOverdue(reminder.dueDate) &&
+                                  !reminder.completed && { color: '#FF3B30' },
+                                isDueToday(reminder.dueDate) &&
+                                  !reminder.completed && {
+                                    color: '#FF9500',
+                                    fontWeight: 'bold',
+                                  },
+                              ]}
+                            >
                               {new Date(reminder.dueDate).toLocaleDateString()}
                               {reminder.dueTime && (
                                 <Text style={styles.dueTimeText}>
                                   {' at '}
                                   {(() => {
-                                    const [hours, minutes] = reminder.dueTime.split(':').map(Number);
+                                    const [hours, minutes] = reminder.dueTime
+                                      .split(':')
+                                      .map(Number);
                                     const period = hours >= 12 ? 'PM' : 'AM';
-                                    const displayHours = hours === 0 ? 12 : hours > 12 ? hours - 12 : hours;
-                                    return `${displayHours}:${minutes.toString().padStart(2, '0')} ${period}`;
+                                    const displayHours =
+                                      hours === 0
+                                        ? 12
+                                        : hours > 12
+                                        ? hours - 12
+                                        : hours;
+                                    return `${displayHours}:${minutes
+                                      .toString()
+                                      .padStart(2, '0')} ${period}`;
                                   })()}
                                 </Text>
                               )}
@@ -1095,26 +1339,30 @@ const ReminderApp = () => {
                           </View>
                         )}
                       </View>
-                      <Text style={[
-                        styles.reminderText,
-                        reminder.completed && styles.completedText
-                      ]}>
+                      <Text
+                        style={[
+                          styles.reminderText,
+                          reminder.completed && styles.completedText,
+                        ]}
+                      >
                         {reminder.text}
                       </Text>
-                      <Text style={styles.dateText}>Created: {reminder.createdAt}</Text>
+                      <Text style={styles.dateText}>
+                        Created: {reminder.createdAt}
+                      </Text>
                     </>
                   )}
                 </View>
 
                 {editingId !== reminder.id && (
                   <View style={styles.actionButtons}>
-                    <TouchableOpacity 
+                    <TouchableOpacity
                       style={styles.editButton}
                       onPress={() => startEditing(reminder)}
                     >
                       <Icon name="edit-3" size={16} color="#007AFF" />
                     </TouchableOpacity>
-                    <TouchableOpacity 
+                    <TouchableOpacity
                       style={styles.deleteButton}
                       onPress={() => deleteReminder(reminder.id)}
                     >
@@ -1136,7 +1384,7 @@ const ReminderApp = () => {
       >
         <SafeAreaView style={styles.modalContainer}>
           <View style={styles.modalHeader}>
-            <TouchableOpacity 
+            <TouchableOpacity
               onPress={() => {
                 setShowAddModal(false);
                 setNewReminder({
@@ -1144,7 +1392,7 @@ const ReminderApp = () => {
                   category: 'personal',
                   priority: 'medium',
                   dueDate: '',
-                  dueTime: ''
+                  dueTime: '',
                 });
               }}
             >
@@ -1152,26 +1400,33 @@ const ReminderApp = () => {
             </TouchableOpacity>
             <Text style={styles.modalTitle}>New Reminder</Text>
             <TouchableOpacity onPress={addReminder}>
-              <Text style={[styles.modalButton, styles.saveModalButton]}>Save</Text>
+              <Text style={[styles.modalButton, styles.saveModalButton]}>
+                Save
+              </Text>
             </TouchableOpacity>
           </View>
-          
-          <ScrollView style={styles.modalContent} showsVerticalScrollIndicator={false}>
+
+          <ScrollView
+            style={styles.modalContent}
+            showsVerticalScrollIndicator={false}
+          >
             <TextInput
               style={styles.modalInput}
               placeholder="What would you like to be reminded about?"
               value={newReminder.text}
-              onChangeText={(text) => setNewReminder({...newReminder, text})}
+              onChangeText={text => setNewReminder({ ...newReminder, text })}
               multiline
               autoFocus
             />
-            
+
             <View style={styles.formRow}>
               <View style={styles.formGroup}>
                 <Text style={styles.label}>Category</Text>
-                <TouchableOpacity 
+                <TouchableOpacity
                   style={styles.selectButton}
-                  onPress={() => setShowCategoryPicker(true)}
+                  onPress={() => {
+                    setShowCategoryPicker(true);
+                  }}
                 >
                   <Text style={styles.selectText}>
                     {categories.find(c => c.id === newReminder.category)?.name}
@@ -1179,12 +1434,14 @@ const ReminderApp = () => {
                   <Icon name="chevron-down" size={16} color="#666" />
                 </TouchableOpacity>
               </View>
-              
+
               <View style={styles.formGroup}>
                 <Text style={styles.label}>Priority</Text>
-                <TouchableOpacity 
+                <TouchableOpacity
                   style={styles.selectButton}
-                  onPress={() => setShowPriorityPicker(true)}
+                  onPress={() => {
+                    setShowPriorityPicker(true);
+                  }}
                 >
                   <Text style={styles.selectText}>
                     {priorities.find(p => p.id === newReminder.priority)?.name}
@@ -1193,7 +1450,7 @@ const ReminderApp = () => {
                 </TouchableOpacity>
               </View>
             </View>
-            
+
             <View style={styles.formRow}>
               <View style={styles.formGroup}>
                 <Text style={styles.label}>Due Date (optional)</Text>
@@ -1202,21 +1459,24 @@ const ReminderApp = () => {
                   onPress={() => {
                     let initialDate = new Date();
                     if (newReminder.dueDate) {
-                      const [year, month, day] = newReminder.dueDate.split('-').map(Number);
+                      const [year, month, day] = newReminder.dueDate
+                        .split('-')
+                        .map(Number);
                       initialDate = new Date(year, month - 1, day, 12, 0, 0, 0);
                     }
                     setSelectedDate(initialDate);
                     setShowDatePicker(true);
                   }}
                 >
-                  <Text style={[
-                    styles.dateButtonText,
-                    !newReminder.dueDate && styles.placeholderText
-                  ]}>
-                    {newReminder.dueDate 
+                  <Text
+                    style={[
+                      styles.dateButtonText,
+                      !newReminder.dueDate && styles.placeholderText,
+                    ]}
+                  >
+                    {newReminder.dueDate
                       ? new Date(newReminder.dueDate).toLocaleDateString()
-                      : 'Select date'
-                    }
+                      : 'Select date'}
                   </Text>
                   <Icon name="calendar" size={16} color="#666" />
                 </TouchableOpacity>
@@ -1227,28 +1487,39 @@ const ReminderApp = () => {
                 <TouchableOpacity
                   style={styles.dateButton}
                   onPress={() => {
-                    let initialTime = { hours: new Date().getHours(), minutes: new Date().getMinutes() };
+                    let initialTime = {
+                      hours: new Date().getHours(),
+                      minutes: new Date().getMinutes(),
+                    };
                     if (newReminder.dueTime) {
-                      const [hours, minutes] = newReminder.dueTime.split(':').map(Number);
+                      const [hours, minutes] = newReminder.dueTime
+                        .split(':')
+                        .map(Number);
                       initialTime = { hours, minutes };
                     }
                     setSelectedTime(initialTime);
                     setShowTimePicker(true);
                   }}
                 >
-                  <Text style={[
-                    styles.dateButtonText,
-                    !newReminder.dueTime && styles.placeholderText
-                  ]}>
-                    {newReminder.dueTime 
+                  <Text
+                    style={[
+                      styles.dateButtonText,
+                      !newReminder.dueTime && styles.placeholderText,
+                    ]}
+                  >
+                    {newReminder.dueTime
                       ? (() => {
-                          const [hours, minutes] = newReminder.dueTime.split(':').map(Number);
+                          const [hours, minutes] = newReminder.dueTime
+                            .split(':')
+                            .map(Number);
                           const period = hours >= 12 ? 'PM' : 'AM';
-                          const displayHours = hours === 0 ? 12 : hours > 12 ? hours - 12 : hours;
-                          return `${displayHours}:${minutes.toString().padStart(2, '0')} ${period}`;
+                          const displayHours =
+                            hours === 0 ? 12 : hours > 12 ? hours - 12 : hours;
+                          return `${displayHours}:${minutes
+                            .toString()
+                            .padStart(2, '0')} ${period}`;
                         })()
-                      : 'Select time'
-                    }
+                      : 'Select time'}
                   </Text>
                   <Icon name="clock" size={16} color="#666" />
                 </TouchableOpacity>
@@ -1263,12 +1534,14 @@ const ReminderApp = () => {
         visible={showTimePicker}
         onClose={() => setShowTimePicker(false)}
         selectedTime={selectedTime}
-        onTimeSelect={(time) => {
+        onTimeSelect={time => {
           if (time) {
-            const timeString = `${time.hours.toString().padStart(2, '0')}:${time.minutes.toString().padStart(2, '0')}`;
-            setNewReminder({...newReminder, dueTime: timeString});
+            const timeString = `${time.hours
+              .toString()
+              .padStart(2, '0')}:${time.minutes.toString().padStart(2, '0')}`;
+            setNewReminder({ ...newReminder, dueTime: timeString });
           } else {
-            setNewReminder({...newReminder, dueTime: ''});
+            setNewReminder({ ...newReminder, dueTime: '' });
           }
         }}
       />
@@ -1278,47 +1551,64 @@ const ReminderApp = () => {
         visible={showDatePicker}
         onClose={() => setShowDatePicker(false)}
         selectedDate={selectedDate}
-        onDateSelect={(date) => {
+        onDateSelect={date => {
           if (date) {
             const year = date.getFullYear();
             const month = String(date.getMonth() + 1).padStart(2, '0');
             const day = String(date.getDate()).padStart(2, '0');
             const dateString = `${year}-${month}-${day}`;
-            setNewReminder({...newReminder, dueDate: dateString});
+            setNewReminder({ ...newReminder, dueDate: dateString });
           } else {
-            setNewReminder({...newReminder, dueDate: ''});
+            setNewReminder({ ...newReminder, dueDate: '' });
           }
         }}
       />
 
-      {/* Category Picker */}
+      {/* Category Picker with fixed filter support */}
       <CategoryPicker
         visible={showCategoryPicker}
         onClose={() => setShowCategoryPicker(false)}
-        selectedValue={editingId ? editingReminder.category : newReminder.category}
-        onSelect={(value) => {
+        selectedValue={
+          editingId
+            ? editingReminder.category
+            : showAddModal
+            ? newReminder.category
+            : filterCategory
+        }
+        onSelect={value => {
           if (editingId) {
-            setEditingReminder({...editingReminder, category: value});
+            setEditingReminder({ ...editingReminder, category: value });
+          } else if (showAddModal) {
+            setNewReminder({ ...newReminder, category: value });
           } else {
-            setNewReminder({...newReminder, category: value});
+            setFilterCategory(value);
           }
         }}
+        isForFilter={!editingId && !showAddModal}
       />
 
-      {/* Priority Picker */}
+      {/* Priority Picker with fixed filter support */}
       <PriorityPicker
         visible={showPriorityPicker}
         onClose={() => setShowPriorityPicker(false)}
-        selectedValue={editingId ? editingReminder.priority : newReminder.priority}
-        onSelect={(value) => {
+        selectedValue={
+          editingId
+            ? editingReminder.priority
+            : showAddModal
+            ? newReminder.priority
+            : filterPriority
+        }
+        onSelect={value => {
           if (editingId) {
-            setEditingReminder({...editingReminder, priority: value});
+            setEditingReminder({ ...editingReminder, priority: value });
+          } else if (showAddModal) {
+            setNewReminder({ ...newReminder, priority: value });
           } else {
-            setNewReminder({...newReminder, priority: value});
+            setFilterPriority(value);
           }
         }}
+        isForFilter={!editingId && !showAddModal}
       />
-
     </SafeAreaView>
   );
 };
@@ -1559,13 +1849,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     marginLeft: 8,
   },
-  editButton: {
-    padding: 8,
-    marginRight: 4,
-  },
-  deleteButton: {
-    padding: 8,
-  },
+
   editContainer: {
     flex: 1,
   },
@@ -1887,7 +2171,7 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
   },
   calendarDay: {
-    width: `${100/7}%`,
+    width: `${100 / 7}%`,
     aspectRatio: 1,
     justifyContent: 'center',
     alignItems: 'center',
