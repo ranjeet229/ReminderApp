@@ -95,9 +95,9 @@ const ReminderApp = () => {
     { id: 'high', name: 'High', color: '#FF3B30' },
   ];
 
-  // Initialize push notifications
+
   useEffect(() => {
-    // Create notification channel for Android
+   
     if (Platform.OS === 'android') {
       PushNotification.createChannel(
         {
@@ -153,7 +153,7 @@ const ReminderApp = () => {
       requestPermissions: Platform.OS === 'ios',
     });
 
-    // Request Android permissions
+
     if (Platform.OS === 'android') {
       PermissionsAndroid.request(
         PermissionsAndroid.PERMISSIONS.POST_NOTIFICATIONS,
@@ -161,12 +161,11 @@ const ReminderApp = () => {
     }
 
     return () => {
-      // Clean up any scheduled notifications on unmount
+      
       PushNotification.cancelAllLocalNotifications();
     };
   }, []);
 
-  // Handle app state changes to check for overdue reminders
   useEffect(() => {
     const handleAppStateChange = nextAppState => {
       if (appState.match(/inactive|background/) && nextAppState === 'active') {
@@ -996,7 +995,6 @@ const ReminderApp = () => {
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="light-content" backgroundColor="#007AFF" />
 
-      {/* Message of the Day Modal */}
       <Modal
         visible={showMessageOfDay && todaysPendingReminders.length > 0}
         transparent
@@ -1071,6 +1069,11 @@ const ReminderApp = () => {
 
       {/* Header */}
       <View style={styles.header}>
+        <StatusBar
+          backgroundColor="transparent"
+          translucent={true}
+          barStyle="light-content"
+        />
         <View style={styles.headerContent}>
           <View style={styles.headerLeft}>
             <Icon name="bell" size={24} color="#fff" />
@@ -1619,9 +1622,10 @@ const styles = StyleSheet.create({
     backgroundColor: '#F2F2F7',
   },
   header: {
-    backgroundColor: '#007AFF',
+    backgroundColor: '#000',
+    paddingTop:60,
     paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingVertical: 20,
     elevation: 4,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
@@ -1635,6 +1639,7 @@ const styles = StyleSheet.create({
   },
   headerLeft: {
     flexDirection: 'row',
+    marginTop:8,
     alignItems: 'center',
     flex: 1,
   },
@@ -1643,6 +1648,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#fff',
     marginLeft: 8,
+    
   },
   addButton: {
     backgroundColor: 'rgba(255,255,255,0.2)',
@@ -1650,6 +1656,7 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     justifyContent: 'center',
+    marginTop:16,
     alignItems: 'center',
   },
   statsContainer: {
